@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
@@ -16,6 +16,28 @@ const OTPVerification = ({ phoneNumber, onVerificationComplete, onCancel }: OTPV
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+
+  // Generate OTP on component mount
+  useEffect(() => {
+    generateAndSendOTP();
+  }, []);
+
+  // Generate a 4-digit OTP and "send" it
+  const generateAndSendOTP = () => {
+    // Generate a random 4-digit OTP
+    const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(newOtp);
+    
+    // In a real app, this would call an API to send the OTP via SMS
+    // For demo purposes, we'll show it in a toast
+    toast.info(`Demo Mode: OTP is ${newOtp}`, {
+      description: `This would be sent to ${phoneNumber} in a real app`,
+      duration: 5000,
+    });
+    
+    return newOtp;
+  };
 
   const handleVerify = () => {
     if (otp.length !== 4) {
@@ -25,18 +47,23 @@ const OTPVerification = ({ phoneNumber, onVerificationComplete, onCancel }: OTPV
 
     setIsVerifying(true);
     
-    // Simulate OTP verification with a delay
+    // Simulate verification delay
     setTimeout(() => {
       setIsVerifying(false);
       
-      // For demo purposes, any 4-digit code is accepted
-      toast.success("Phone number verified successfully!");
-      onVerificationComplete();
+      // Verify that entered OTP matches the generated one
+      if (otp === generatedOtp) {
+        toast.success("Phone number verified successfully!");
+        onVerificationComplete();
+      } else {
+        toast.error("Invalid OTP. Please try again.");
+        setOtp('');
+      }
     }, 1500);
   };
 
   const handleResendOTP = () => {
-    toast.info(`New OTP sent to ${phoneNumber}`);
+    const newOtp = generateAndSendOTP();
     setResendDisabled(true);
     setCountdown(30);
     

@@ -24,11 +24,11 @@ const ContactForm = ({ form, phoneVerified, handleVerifyPhone }: ContactFormProp
           name="phoneNumber"
           render={({ field }) => (
             <FormItem className="flex-1">
-              <FormLabel>Phone Number</FormLabel>
+              <FormLabel>Phone Number (Indian Format)</FormLabel>
               <div className="flex">
                 <FormControl>
                   <Input 
-                    placeholder="Enter phone number" 
+                    placeholder="+91 1234567890" 
                     {...field} 
                     className="focus-visible:ring-primary-500 rounded-r-none"
                     disabled={phoneVerified}
