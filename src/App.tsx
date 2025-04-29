@@ -13,6 +13,7 @@ import SchedulePickup from "./pages/SchedulePickup";
 import HowItWorks from "./pages/HowItWorks";
 import Awareness from "./pages/Awareness";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/schedule-pickup" element={<SchedulePickup />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/awareness" element={<Awareness />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

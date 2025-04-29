@@ -7,40 +7,71 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Calendar, Clock, Package, User, Recycle, Clock3, MapPin, FileText } from 'lucide-react';
+import { Calendar, Clock, Package, User, Recycle, Clock3, MapPin, FileText, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
 
 // Mock data for pickup history
 const pickupHistory = [
   {
     id: 'PU001',
     date: '2024-04-15',
+    timeSlot: '9:00 AM - 12:00 PM',
     status: 'Completed',
     items: ['Old laptop', 'Mobile phone', 'Printer'],
     address: '123 Main St, Anytown, CA 94000',
+    collectedBy: 'John Smith',
+    weight: '5.2 kg',
+    recyclingFacility: 'EcoTech Recycling Center',
+    carbonSaved: '12.5 kg CO₂'
   },
   {
     id: 'PU002',
     date: '2024-03-28',
+    timeSlot: '12:00 PM - 3:00 PM',
     status: 'Completed',
     items: ['Computer monitor', 'Keyboard', 'Mouse'],
     address: '123 Main St, Anytown, CA 94000',
+    collectedBy: 'Sarah Johnson',
+    weight: '3.8 kg',
+    recyclingFacility: 'GreenCycle Processing',
+    carbonSaved: '8.7 kg CO₂'
   },
   {
     id: 'PU003',
     date: '2024-05-10',
+    timeSlot: '3:00 PM - 6:00 PM',
     status: 'Scheduled',
     items: ['TV', 'DVD player'],
     address: '123 Main St, Anytown, CA 94000',
+    collectedBy: 'Pending Assignment',
+    weight: 'Pending',
+    recyclingFacility: 'To be determined',
+    carbonSaved: 'Pending'
   },
 ];
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedPickup, setSelectedPickup] = useState<typeof pickupHistory[0] | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+
+  const handleViewDetails = (pickup: typeof pickupHistory[0]) => {
+    setSelectedPickup(pickup);
+    setIsDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -241,7 +272,12 @@ const Dashboard = () => {
                             </div>
                           </div>
                           <div className="mt-4 flex justify-end">
-                            <Button variant="outline" size="sm" className="text-sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-sm"
+                              onClick={() => handleViewDetails(pickup)}
+                            >
                               <FileText className="mr-1 h-4 w-4" />
                               View Details
                             </Button>
@@ -322,6 +358,104 @@ const Dashboard = () => {
           </Tabs>
         </div>
       </main>
+      
+      {/* Pickup Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Pickup Details</DialogTitle>
+            <DialogDescription>
+              Details for pickup #{selectedPickup?.id}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPickup && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Date</p>
+                  <p>{selectedPickup.date}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Time Slot</p>
+                  <p>{selectedPickup.timeSlot}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <p className={`font-medium ${
+                    selectedPickup.status === 'Completed' 
+                      ? 'text-green-600' 
+                      : 'text-blue-600'
+                  }`}>
+                    {selectedPickup.status}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Collected By</p>
+                  <p>{selectedPickup.collectedBy}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-600">Address</p>
+                <p>{selectedPickup.address}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-600">Items Collected</p>
+                <ul className="list-disc list-inside pl-2">
+                  {selectedPickup.items.map((item, idx) => (
+                    <li key={idx} className="text-gray-700">{item}</li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Weight</p>
+                  <p>{selectedPickup.weight}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Carbon Saved</p>
+                  <p className="text-green-600">{selectedPickup.carbonSaved}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-600">Recycling Facility</p>
+                <p>{selectedPickup.recyclingFacility}</p>
+              </div>
+              
+              {selectedPickup.status === 'Scheduled' && (
+                <div className="bg-blue-50 p-3 rounded-md">
+                  <p className="text-sm text-blue-700">
+                    This pickup is scheduled for collection. You'll receive updates via email and SMS.
+                  </p>
+                </div>
+              )}
+              
+              {selectedPickup.status === 'Completed' && (
+                <div className="bg-green-50 p-3 rounded-md">
+                  <p className="text-sm text-green-700">
+                    Thank you for recycling responsibly! Your contribution helps make our planet greener.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+            {selectedPickup?.status === 'Scheduled' && (
+              <Button variant="destructive">
+                Cancel Pickup
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Footer />
     </div>
