@@ -19,7 +19,10 @@ export const pickupFormSchema = z.object({
   items: z.array(z.string()).refine((val) => val.length > 0, {
     message: "Select at least one item",
   }),
-  phoneNumber: z.string().min(10, { message: 'Valid phone number is required' }),
+  phoneNumber: z.string().min(1, { message: 'Phone number is required' })
+    .refine(val => /^\+91\s?\d{10}$/.test(val), {
+      message: "Please enter a valid Indian phone number starting with +91 followed by 10 digits"
+    }),
   notes: z.string().optional(),
 });
 

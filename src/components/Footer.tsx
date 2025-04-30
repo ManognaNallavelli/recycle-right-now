@@ -52,10 +52,9 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold text-primary-800 mb-4">Contact Us</h3>
             <ul className="space-y-2">
-              <li className="text-gray-600">123 Green Street</li>
-              <li className="text-gray-600">Eco City, EC 12345</li>
-              <li className="text-gray-600">support@ecorecycle.com</li>
-              <li className="text-gray-600">+1 (555) 123-4567</li>
+              <li className="text-gray-600">GRIET, Hyderabad</li>
+              <li className="text-gray-600">+91 1234567895</li>
+              <li className="text-gray-600">ewaste@griet.com</li>
             </ul>
           </div>
         </div>

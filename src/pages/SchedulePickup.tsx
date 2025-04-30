@@ -11,7 +11,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from "sonner";
 import { format } from "date-fns";
-import OTPVerification from '@/components/OTPVerification';
 import { pickupFormSchema, type PickupFormValues } from '@/utils/validation';
 import LocationForm from '@/components/pickup/LocationForm';
 import ContactForm from '@/components/pickup/ContactForm';
@@ -25,8 +24,6 @@ const SchedulePickup = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [showOtpVerification, setShowOtpVerification] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
   
   const form = useForm<PickupFormValues>({
     resolver: zodResolver(pickupFormSchema),
@@ -45,35 +42,6 @@ const SchedulePickup = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const handleVerifyPhone = (e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    const phoneNumber = form.getValues('phoneNumber');
-    if (!phoneNumber || phoneNumber.length < 10) {
-      form.setError('phoneNumber', { 
-        type: 'manual', 
-        message: 'Please enter a valid phone number' 
-      });
-      return;
-    }
-    
-    // Show OTP verification component
-    setShowOtpVerification(true);
-    
-    // Simulate sending OTP
-    toast.info(`OTP sent to ${phoneNumber}`);
-  };
-
-  const handleOtpVerificationComplete = () => {
-    setShowOtpVerification(false);
-    setPhoneVerified(true);
-    toast.success("Phone number verified!");
-  };
-
-  const handleOtpVerificationCancel = () => {
-    setShowOtpVerification(false);
-  };
-
   const onSubmit = async (values: PickupFormValues) => {
     // Check if location is Hyderabad
     if (values.city.toLowerCase() !== 'hyderabad') {
@@ -83,10 +51,11 @@ const SchedulePickup = () => {
       return;
     }
     
-    // Check if phone is verified
-    if (!phoneVerified) {
-      toast.error("Phone verification required", {
-        description: "Please verify your phone number before scheduling a pickup"
+    // Validate phone number format (Indian number)
+    const phoneRegex = /^\+91\s?\d{10}$/;
+    if (!phoneRegex.test(values.phoneNumber.trim())) {
+      toast.error("Invalid phone number format", {
+        description: "Please enter a valid Indian phone number starting with +91 followed by 10 digits"
       });
       return;
     }
@@ -180,31 +149,18 @@ const SchedulePickup = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {showOtpVerification ? (
-                  <OTPVerification 
-                    phoneNumber={form.getValues('phoneNumber')} 
-                    onVerificationComplete={handleOtpVerificationComplete}
-                    onCancel={handleOtpVerificationCancel}
-                  />
-                ) : (
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                      <LocationForm form={form} />
-                      <ContactForm 
-                        form={form} 
-                        phoneVerified={phoneVerified} 
-                        handleVerifyPhone={handleVerifyPhone} 
-                      />
-                      <ScheduleForm form={form} />
-                      <ItemsForm form={form} />
-                      <SubmitProgress 
-                        isSubmitting={isSubmitting} 
-                        progress={progress} 
-                        phoneVerified={phoneVerified} 
-                      />
-                    </form>
-                  </Form>
-                )}
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <LocationForm form={form} />
+                    <ContactForm form={form} />
+                    <ScheduleForm form={form} />
+                    <ItemsForm form={form} />
+                    <SubmitProgress 
+                      isSubmitting={isSubmitting} 
+                      progress={progress} 
+                    />
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </div>
