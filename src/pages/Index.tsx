@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -99,27 +98,7 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Statistics Section */}
-      <section className="py-20 bg-primary-800 text-white">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <h3 className="text-4xl md:text-5xl font-bold mb-2">5,000+</h3>
-              <p className="text-lg text-gray-200">Pickups Completed</p>
-            </div>
-            <div className="text-center">
-              <h3 className="text-4xl md:text-5xl font-bold mb-2">250+ tons</h3>
-              <p className="text-lg text-gray-200">E-Waste Recycled</p>
-            </div>
-            <div className="text-center">
-              <h3 className="text-4xl md:text-5xl font-bold mb-2">3,000+</h3>
-              <p className="text-lg text-gray-200">Happy Customers</p>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Awareness Section */}
+      {/* Awareness Section - We're directly connecting this section with the How It Works section above */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center mb-16">
