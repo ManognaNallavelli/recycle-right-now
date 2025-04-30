@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Calendar, Clock, Package, User, Recycle, Clock3, MapPin, FileText, X } from 'lucide-react';
+import { Calendar, Clock, Package, User, Recycle, Clock3, MapPin, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,60 +17,81 @@ import {
   DialogFooter,
   DialogClose
 } from "@/components/ui/dialog";
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock data for pickup history
-const pickupHistory = [
-  {
-    id: 'PU001',
-    date: '2024-04-15',
-    timeSlot: '9:00 AM - 12:00 PM',
-    status: 'Completed',
-    items: ['Old laptop', 'Mobile phone', 'Printer'],
-    address: '123 Main St, Anytown, CA 94000',
-    collectedBy: 'John Smith',
-    weight: '5.2 kg',
-    recyclingFacility: 'EcoTech Recycling Center',
-    carbonSaved: '12.5 kg CO₂'
-  },
-  {
-    id: 'PU002',
-    date: '2024-03-28',
-    timeSlot: '12:00 PM - 3:00 PM',
-    status: 'Completed',
-    items: ['Computer monitor', 'Keyboard', 'Mouse'],
-    address: '123 Main St, Anytown, CA 94000',
-    collectedBy: 'Sarah Johnson',
-    weight: '3.8 kg',
-    recyclingFacility: 'GreenCycle Processing',
-    carbonSaved: '8.7 kg CO₂'
-  },
-  {
-    id: 'PU003',
-    date: '2024-05-10',
-    timeSlot: '3:00 PM - 6:00 PM',
-    status: 'Scheduled',
-    items: ['TV', 'DVD player'],
-    address: '123 Main St, Anytown, CA 94000',
-    collectedBy: 'Pending Assignment',
-    weight: 'Pending',
-    recyclingFacility: 'To be determined',
-    carbonSaved: 'Pending'
-  },
-];
+// Pickup type definition
+interface Pickup {
+  id: string;
+  date: string;
+  time_slot: string;
+  status: string;
+  items: string[];
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone_number: string;
+  notes?: string;
+  created_at: string;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedPickup, setSelectedPickup] = useState<typeof pickupHistory[0] | null>(null);
+  const [selectedPickup, setSelectedPickup] = useState<Pickup | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [pickups, setPickups] = useState<Pickup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Fetch user's pickups from the database
+    if (user) {
+      fetchUserPickups();
+    }
+  }, [user]);
+
+  const fetchUserPickups = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('pickups')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching pickups:", error);
+        return;
+      }
+      
+      if (data) {
+        setPickups(data as Pickup[]);
+      }
+    } catch (error) {
+      console.error("Error fetching pickups:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  const handleViewDetails = (pickup: typeof pickupHistory[0]) => {
+  const handleViewDetails = (pickup: Pickup) => {
     setSelectedPickup(pickup);
     setIsDialogOpen(true);
+  };
+
+  const getPickupAddress = (pickup: Pickup) => {
+    return `${pickup.address}, ${pickup.city}, ${pickup.state} ${pickup.zip}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric'
+    });
   };
 
   return (
@@ -79,7 +100,7 @@ const Dashboard = () => {
       
       <main className="flex-1 py-20 bg-gray-50">
         <div className="container mx-auto px-4 md:px-6">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Welcome, {user.name}</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Welcome, {user.user_metadata?.name || user.email}</h1>
           <p className="text-gray-600 mb-8">User ID: {user.id}</p>
           
           <Tabs 
@@ -124,10 +145,12 @@ const Dashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {pickupHistory.filter(p => p.status === 'Scheduled').length > 0 ? (
-                      pickupHistory.filter(p => p.status === 'Scheduled').map((pickup) => (
+                    {isLoading ? (
+                      <p className="text-gray-500">Loading pickups...</p>
+                    ) : pickups.filter(p => p.status.toLowerCase() === 'scheduled').length > 0 ? (
+                      pickups.filter(p => p.status.toLowerCase() === 'scheduled').map((pickup) => (
                         <div key={pickup.id} className="mb-4 last:mb-0">
-                          <p className="font-medium">{pickup.date}</p>
+                          <p className="font-medium">{formatDate(pickup.date)}</p>
                           <p className="text-sm text-gray-600">{pickup.items.join(', ')}</p>
                           <div className="flex items-center mt-2">
                             <div className="h-2 w-2 rounded-full bg-primary-500 mr-2"></div>
@@ -161,8 +184,8 @@ const Dashboard = () => {
                       <div>
                         <p className="text-gray-600 text-sm">Items Recycled</p>
                         <p className="text-2xl font-bold">{
-                          pickupHistory
-                            .filter(p => p.status === 'Completed')
+                          pickups
+                            .filter(p => p.status.toLowerCase() === 'completed')
                             .flatMap(p => p.items)
                             .length
                         }</p>
@@ -170,13 +193,13 @@ const Dashboard = () => {
                       <div>
                         <p className="text-gray-600 text-sm">Pickups Completed</p>
                         <p className="text-2xl font-bold">
-                          {pickupHistory.filter(p => p.status === 'Completed').length}
+                          {pickups.filter(p => p.status.toLowerCase() === 'completed').length}
                         </p>
                       </div>
                       <div>
                         <p className="text-gray-600 text-sm">Environmental Impact</p>
                         <p className="text-sm text-green-600 font-medium">
-                          You've helped save approximately 25kg of CO₂ emissions!
+                          You've helped save approximately {pickups.length * 5}kg of CO₂ emissions!
                         </p>
                       </div>
                     </div>
@@ -235,20 +258,24 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {pickupHistory.length > 0 ? (
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">Loading your pickup history...</p>
+                    </div>
+                  ) : pickups.length > 0 ? (
                     <div className="space-y-6">
-                      {pickupHistory.map((pickup) => (
+                      {pickups.map((pickup) => (
                         <div key={pickup.id} className="border rounded-lg p-4 bg-white">
                           <div className="flex justify-between items-start mb-4">
                             <div>
-                              <h3 className="font-medium">Pickup #{pickup.id}</h3>
+                              <h3 className="font-medium">Pickup #{pickup.id.substring(0, 8)}</h3>
                               <div className="flex items-center mt-1">
                                 <Clock3 className="h-4 w-4 text-gray-500 mr-1" />
-                                <span className="text-sm text-gray-600">{pickup.date}</span>
+                                <span className="text-sm text-gray-600">{formatDate(pickup.date)}</span>
                               </div>
                             </div>
                             <div className={`text-sm font-medium px-2 py-1 rounded-full ${
-                              pickup.status === 'Completed' 
+                              pickup.status.toLowerCase() === 'completed' 
                                 ? 'bg-green-100 text-green-700' 
                                 : 'bg-blue-100 text-blue-700'
                             }`}>
@@ -267,7 +294,7 @@ const Dashboard = () => {
                             <div>
                               <div className="flex items-start">
                                 <MapPin className="h-4 w-4 text-gray-500 mr-1 mt-0.5" />
-                                <p className="text-sm text-gray-600">{pickup.address}</p>
+                                <p className="text-sm text-gray-600">{getPickupAddress(pickup)}</p>
                               </div>
                             </div>
                           </div>
@@ -315,7 +342,7 @@ const Dashboard = () => {
                         <p className="font-medium text-gray-700">Name:</p>
                       </div>
                       <div className="md:w-3/4">
-                        <p>{user.name}</p>
+                        <p>{user.user_metadata?.name || 'Not set'}</p>
                       </div>
                     </div>
                     <div className="flex flex-col md:flex-row md:items-center">
@@ -365,7 +392,7 @@ const Dashboard = () => {
           <DialogHeader>
             <DialogTitle>Pickup Details</DialogTitle>
             <DialogDescription>
-              Details for pickup #{selectedPickup?.id}
+              Details for pickup #{selectedPickup?.id.substring(0, 8)}
             </DialogDescription>
           </DialogHeader>
           
@@ -374,16 +401,16 @@ const Dashboard = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Date</p>
-                  <p>{selectedPickup.date}</p>
+                  <p>{formatDate(selectedPickup.date)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Time Slot</p>
-                  <p>{selectedPickup.timeSlot}</p>
+                  <p>{selectedPickup.time_slot}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Status</p>
                   <p className={`font-medium ${
-                    selectedPickup.status === 'Completed' 
+                    selectedPickup.status.toLowerCase() === 'completed' 
                       ? 'text-green-600' 
                       : 'text-blue-600'
                   }`}>
@@ -391,18 +418,18 @@ const Dashboard = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Collected By</p>
-                  <p>{selectedPickup.collectedBy}</p>
+                  <p className="text-sm font-medium text-gray-600">Phone Number</p>
+                  <p>{selectedPickup.phone_number}</p>
                 </div>
               </div>
               
               <div>
                 <p className="text-sm font-medium text-gray-600">Address</p>
-                <p>{selectedPickup.address}</p>
+                <p>{getPickupAddress(selectedPickup)}</p>
               </div>
               
               <div>
-                <p className="text-sm font-medium text-gray-600">Items Collected</p>
+                <p className="text-sm font-medium text-gray-600">Items for Recycling</p>
                 <ul className="list-disc list-inside pl-2">
                   {selectedPickup.items.map((item, idx) => (
                     <li key={idx} className="text-gray-700">{item}</li>
@@ -410,23 +437,14 @@ const Dashboard = () => {
                 </ul>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              {selectedPickup.notes && (
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Weight</p>
-                  <p>{selectedPickup.weight}</p>
+                  <p className="text-sm font-medium text-gray-600">Notes</p>
+                  <p className="text-gray-700">{selectedPickup.notes}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Carbon Saved</p>
-                  <p className="text-green-600">{selectedPickup.carbonSaved}</p>
-                </div>
-              </div>
+              )}
               
-              <div>
-                <p className="text-sm font-medium text-gray-600">Recycling Facility</p>
-                <p>{selectedPickup.recyclingFacility}</p>
-              </div>
-              
-              {selectedPickup.status === 'Scheduled' && (
+              {selectedPickup.status.toLowerCase() === 'scheduled' && (
                 <div className="bg-blue-50 p-3 rounded-md">
                   <p className="text-sm text-blue-700">
                     This pickup is scheduled for collection. You'll receive updates via email and SMS.
@@ -434,7 +452,7 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {selectedPickup.status === 'Completed' && (
+              {selectedPickup.status.toLowerCase() === 'completed' && (
                 <div className="bg-green-50 p-3 rounded-md">
                   <p className="text-sm text-green-700">
                     Thank you for recycling responsibly! Your contribution helps make our planet greener.
@@ -448,7 +466,7 @@ const Dashboard = () => {
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
             </DialogClose>
-            {selectedPickup?.status === 'Scheduled' && (
+            {selectedPickup?.status.toLowerCase() === 'scheduled' && (
               <Button variant="destructive">
                 Cancel Pickup
               </Button>

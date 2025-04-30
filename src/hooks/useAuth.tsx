@@ -1,58 +1,62 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from '@supabase/supabase-js';
 import { toast } from "sonner";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  forgotPassword: (email: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for user in localStorage
-    const storedUser = localStorage.getItem('ecorecycle_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user', error);
-        localStorage.removeItem('ecorecycle_user');
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (event === 'SIGNED_IN') {
+          toast.success("Login successful!");
+        }
+        if (event === 'SIGNED_OUT') {
+          toast.info("You have been logged out");
+        }
       }
-    }
-    setIsLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // In a real app, this would be API calls
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      // Mock API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       
-      // Mock successful login with a generated ID
-      const mockUser = {
-        id: `user_${Math.random().toString(36).substr(2, 9)}`,
-        name: email.split('@')[0],
-        email
-      };
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
       
-      setUser(mockUser);
-      localStorage.setItem('ecorecycle_user', JSON.stringify(mockUser));
-      toast.success("Login successful!");
       return true;
     } catch (error) {
       console.error('Login failed', error);
@@ -66,19 +70,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      // Mock API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
       
-      // Mock successful registration with a generated ID
-      const mockUser = {
-        id: `user_${Math.random().toString(36).substr(2, 9)}`,
-        name,
-        email
-      };
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
       
-      setUser(mockUser);
-      localStorage.setItem('ecorecycle_user', JSON.stringify(mockUser));
-      toast.success("Registration successful!");
+      toast.success("Registration successful! Please check your email to verify your account.");
       return true;
     } catch (error) {
       console.error('Registration failed', error);
@@ -89,14 +96,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('ecorecycle_user');
-    toast.info("You have been logged out");
+  const logout = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setIsLoading(false);
+  };
+
+  const forgotPassword = async (email: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+      
+      toast.success("Password reset link sent to your email");
+      return true;
+    } catch (error) {
+      console.error('Password reset failed', error);
+      toast.error("Failed to send password reset email. Please try again.");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      login, 
+      register, 
+      logout, 
+      isLoading,
+      forgotPassword
+    }}>
       {children}
     </AuthContext.Provider>
   );

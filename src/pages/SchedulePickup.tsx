@@ -18,6 +18,7 @@ import ContactForm from '@/components/pickup/ContactForm';
 import ScheduleForm from '@/components/pickup/ScheduleForm';
 import ItemsForm from '@/components/pickup/ItemsForm';
 import SubmitProgress from '@/components/pickup/SubmitProgress';
+import { supabase } from '@/integrations/supabase/client';
 
 const SchedulePickup = () => {
   const { user } = useAuth();
@@ -94,22 +95,44 @@ const SchedulePickup = () => {
     setIsSubmitting(true);
     setProgress(0);
     
-    // Simulate API call with progress
+    // Simulate progress
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        if (prev >= 95) {
           clearInterval(interval);
-          return 100;
+          return 95;
         }
         return prev + 5;
       });
     }, 100);
     
-    // Mock submission delay
-    setTimeout(() => {
-      clearInterval(interval);
+    try {
+      // Save to database
+      const { error } = await supabase.from('pickups').insert({
+        user_id: user.id,
+        address: values.address,
+        city: values.city,
+        state: values.state,
+        zip: values.zip,
+        items: values.items,
+        phone_number: values.phoneNumber,
+        notes: values.notes,
+        date: values.date.toISOString().split('T')[0],
+        time_slot: values.timeSlot,
+        status: 'Scheduled'
+      });
+      
+      if (error) {
+        console.error("Error saving pickup:", error);
+        toast.error("Failed to schedule pickup", {
+          description: error.message
+        });
+        setIsSubmitting(false);
+        clearInterval(interval);
+        return;
+      }
+      
       setProgress(100);
-      setIsSubmitting(false);
       
       // Show success toast
       toast.success("Pickup scheduled successfully!", {
@@ -124,7 +147,15 @@ const SchedulePickup = () => {
       setTimeout(() => {
         navigate('/dashboard');
       }, 1500);
-    }, 2000);
+    } catch (error) {
+      console.error("Error scheduling pickup:", error);
+      toast.error("Something went wrong", {
+        description: "Failed to schedule pickup. Please try again."
+      });
+    } finally {
+      clearInterval(interval);
+      setIsSubmitting(false);
+    }
   };
 
   return (

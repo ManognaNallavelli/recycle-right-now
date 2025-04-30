@@ -33,7 +33,7 @@ const OTPVerification = ({ phoneNumber, onVerificationComplete, onCancel }: OTPV
     // For demo purposes, we'll show it in a toast
     toast.info(`Demo Mode: OTP is ${newOtp}`, {
       description: `This would be sent to ${phoneNumber} in a real app`,
-      duration: 5000,
+      duration: 10000,
     });
     
     return newOtp;
@@ -47,11 +47,10 @@ const OTPVerification = ({ phoneNumber, onVerificationComplete, onCancel }: OTPV
 
     setIsVerifying(true);
     
-    // Simulate verification delay
+    // Verify that entered OTP matches the generated one
     setTimeout(() => {
       setIsVerifying(false);
       
-      // Verify that entered OTP matches the generated one
       if (otp === generatedOtp) {
         toast.success("Phone number verified successfully!");
         onVerificationComplete();
@@ -64,6 +63,7 @@ const OTPVerification = ({ phoneNumber, onVerificationComplete, onCancel }: OTPV
 
   const handleResendOTP = () => {
     const newOtp = generateAndSendOTP();
+    setGeneratedOtp(newOtp);
     setResendDisabled(true);
     setCountdown(30);
     
